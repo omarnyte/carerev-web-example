@@ -1,20 +1,22 @@
-import { LoadingIndicator } from 'app/components/LoadingIndicator';
 import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { RouteComponentProps } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
+import { LoadingIndicator } from 'app/components/LoadingIndicator';
+import { PageWrapper } from 'app/components/PageWrapper';
 import { useInjectReducer, useInjectSaga } from 'utils/redux-injectors';
 
+import { ErrorView } from './ErrorView';
 import { actions } from './actions';
 import { countryReducer, key } from './reducer';
 import { saga } from './saga';
 import { selectCountry, selectError, selectLoading } from './selectors';
 
-interface TParams {
+interface Params {
   id: string;
 }
 
-export function Country({ match }: RouteComponentProps<TParams>) {
+export function Country() {
   useInjectReducer({ key: key, reducer: countryReducer });
   useInjectSaga({ key: key, saga });
 
@@ -24,25 +26,32 @@ export function Country({ match }: RouteComponentProps<TParams>) {
 
   const dispatch = useDispatch();
 
-  useEffect(() => {
-    const countryId = match.params.id;
+  const { id: countryId } = useParams<Params>();
+
+  const dispatchFetchCountryAction = () =>
     dispatch(actions.fetchCountry(countryId));
+
+  useEffect(() => {
+    dispatchFetchCountryAction();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <div>
+    <PageWrapper>
       {isLoading && <LoadingIndicator small />}
-      {country ? (
-        <div>
+      {error && (
+        <ErrorView error={error} onRetry={dispatchFetchCountryAction} />
+      )}
+      {country && (
+        <>
           <h1>
             {country.name} ({country.code})
           </h1>
-          <span>{country.currency_code}</span>
-        </div>
-      ) : error ? (
-        <span>{error}</span>
-      ) : null}
-    </div>
+          <span>
+            <strong>Currency Code:</strong> {country.currency_code}
+          </span>
+        </>
+      )}
+    </PageWrapper>
   );
 }
